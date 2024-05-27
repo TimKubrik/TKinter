@@ -27,10 +27,14 @@ class DrawingApp:
         # Переменные для хранения цвета пера
         self.pen_color = 'black'
 
-        # Привязка событий к холсту вызывает методы paint и reset
+        # Привязка событий к холсту вызывает методы paint, reset,pick_color
         self.canvas.bind('<B1-Motion>', self.paint)
         self.canvas.bind('<ButtonRelease-1>', self.reset)
+        self.canvas.bind('<Button-3>', self.pick_color)  # Привязка события правой кнопки мыши
 
+        # Привязка горячих клавиш
+        self.root.bind('<Control-s>', self.save_image)
+        self.root.bind('<Control-c>', self.choose_color)
     def setup_ui(self):
         # Создается рамка для кнопок и шкалы размера кисти
         control_frame = tk.Frame(self.root)
@@ -41,6 +45,9 @@ class DrawingApp:
 
         color_button = tk.Button(control_frame, text="Выбрать цвет", command=self.choose_color)
         color_button.pack(side=tk.LEFT)
+
+        eraser_button = tk.Button(control_frame, text="Ластик", command=self.use_eraser)
+        eraser_button.pack(side=tk.LEFT)
 
         save_button = tk.Button(control_frame, text="Сохранить", command=self.save_image)
         save_button.pack(side=tk.LEFT)
@@ -69,7 +76,7 @@ class DrawingApp:
                                     capstyle=tk.ROUND, smooth=tk.TRUE)
             self.draw.line([self.last_x, self.last_y, event.x, event.y], fill=self.pen_color,
                            width=self.brush_size_scale.get())
-        # Координаты начала и конца лини
+        # Координаты начала и конца линии
         self.last_x = event.x
         self.last_y = event.y
 
@@ -84,12 +91,24 @@ class DrawingApp:
         self.draw = ImageDraw.Draw(self.image)
 
     # открывает диалоговое окно для выбора цвета и сохраняет выбранный цвет в переменной pen_color.
-    def choose_color(self):
+    def choose_color(self, event=None):
+        self.previous_color = self.pen_color  # Сохранение предыдущего цвета
         self.pen_color = colorchooser.askcolor(color=self.pen_color)[1]
+
+    def use_eraser(self):
+        # Устанавливает цвет пера в цвет фона ("white") для использования в качестве ластика
+        self.previous_color = self.pen_color  # Сохранение предыдущего цвета
+        self.pen_color = "white"
+
+    def pick_color(self, event):
+        # Получение цвета пикселя под курсором мыши и установка его как текущего цвета пера
+        x, y = event.x, event.y
+        self.pen_color = self.image.getpixel((x, y))
+        self.previous_color = self.pen_color
 
     # Открывает диалоговое окно для выбора файла и сохраняет изображение в выбранный файл в формате PNG
     # Если файл не имеет расширения .png, то оно добавляется автоматически.
-    def save_image(self):
+    def save_image(self, event=None):
         file_path = filedialog.asksaveasfilename(filetypes=[('PNG files', '*.png')])
         if file_path:
             if not file_path.endswith('.png'):
