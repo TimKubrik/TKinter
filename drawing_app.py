@@ -1,50 +1,39 @@
 import tkinter as tk
-from tkinter import colorchooser, filedialog, messagebox
+from tkinter import colorchooser, filedialog, messagebox,simpledialog
 from PIL import Image, ImageDraw
-
 
 class DrawingApp:
     def __init__(self, root):
         self.root = root
-        # Установка титула окна
         self.root.title("Рисовалка с сохранением в PNG")
+        self.pen_color = 'black'
 
-        # Создание изображения с белым фоном
         self.image = Image.new("RGB", (600, 400), "white")
         self.draw = ImageDraw.Draw(self.image)
 
-        # Создание холста с белым фоном
         self.canvas = tk.Canvas(root, width=600, height=400, bg='white')
-        # Добавление холста
         self.canvas.pack()
 
-        # Создание маленького холста для отображения текущего цвета
         self.color_preview = tk.Label(root, width=5, height=2, bg='black')
         self.color_preview.pack(side=tk.RIGHT)
-        self.update_color_preview(self.pick_color)
+        self.update_color_preview()
 
-        # Установка интерфейса
         self.setup_ui()
 
-        # Переменные для хранения координат мыши
         self.last_x, self.last_y = None, None
+        self.update_color_preview()
 
-        # Переменные для хранения цвета пера
-        self.pen_color = 'black'
-
-        # Привязка событий к холсту вызывает методы paint, reset,pick_color
         self.canvas.bind('<B1-Motion>', self.paint)
         self.canvas.bind('<ButtonRelease-1>', self.reset)
-        self.canvas.bind('<Button-3>', self.pick_color)  # Привязка события правой кнопки мыши
+        self.canvas.bind('<Button-3>', self.pick_color)
 
-        # Привязка горячих клавиш
         self.root.bind('<Control-s>', self.save_image)
         self.root.bind('<Control-c>', self.choose_color)
+
     def setup_ui(self):
-        # Создается рамка для кнопок и шкалы размера кисти
         control_frame = tk.Frame(self.root)
         control_frame.pack(fill=tk.X)
-        # Создание кнопок
+
         clear_button = tk.Button(control_frame, text="Очистить", command=self.clear_canvas)
         clear_button.pack(side=tk.LEFT)
 
@@ -56,66 +45,54 @@ class DrawingApp:
 
         save_button = tk.Button(control_frame, text="Сохранить", command=self.save_image)
         save_button.pack(side=tk.LEFT)
-        # Создается шкала размера кисти и ориентацией по горизонтали
+
+        resize_button = tk.Button(control_frame, text="Resize", command=self.resize_canvas)
+        resize_button.pack(side=tk.LEFT)
+
         self.brush_size_scale = tk.Scale(control_frame, from_=1, to=10, orient=tk.HORIZONTAL)
         self.brush_size_scale.pack(side=tk.LEFT)
-        # Добавление размеров кисти в список
+
         self.sizes = [1, 2, 5, 10]
         self.current_size = tk.StringVar()
-        self.current_size.set(str(self.sizes[0]))  # Установка начального размера кисти
+        self.current_size.set(str(self.sizes[0]))
 
-        # Создание выпадающего списка с размерами кисти
-        self.size_menu = tk.OptionMenu(self.root, self.current_size, *map(str, self.sizes),
-                                       command=self.update_brush_size)
+        self.size_menu = tk.OptionMenu(self.root, self.current_size, *map(str, self.sizes), command=self.update_brush_size)
         self.size_menu.pack(side=tk.LEFT)
 
     def update_brush_size(self, value):
-        # Обновление текущего размера кисти при выборе значения из списка
         self.brush_size_scale.set(int(value))
 
     def paint(self, event):
-        # Рисует линию на холсте и на изображении
         if self.last_x and self.last_y:
-            self.canvas.create_line(self.last_x, self.last_y, event.x, event.y,
-                                    width=self.brush_size_scale.get(), fill=self.pen_color,
-                                    capstyle=tk.ROUND, smooth=tk.TRUE)
-            self.draw.line([self.last_x, self.last_y, event.x, event.y], fill=self.pen_color,
-                           width=self.brush_size_scale.get())
-        # Координаты начала и конца линии
+            self.canvas.create_line(self.last_x, self.last_y, event.x, event.y, width=self.brush_size_scale.get(), fill=self.pen_color, capstyle=tk.ROUND, smooth=tk.TRUE)
+            self.draw.line([self.last_x, self.last_y, event.x, event.y], fill=self.pen_color, width=self.brush_size_scale.get())
         self.last_x = event.x
         self.last_y = event.y
 
     def reset(self, event):
-        # сбрасывает координаты начала и конца линии
         self.last_x, self.last_y = None, None
 
-    # удаляет все элементы на холсте с помощью метода delete, а затем создает новое изображение с белым фоном
     def clear_canvas(self):
         self.canvas.delete("all")
         self.image = Image.new("RGB", (600, 400), "white")
         self.draw = ImageDraw.Draw(self.image)
 
-    # открывает диалоговое окно для выбора цвета и сохраняет выбранный цвет в переменной pen_color.
     def choose_color(self, event=None):
-        self.previous_color = self.pen_color  # Сохранение предыдущего цвета
+        self.previous_color = self.pen_color
         self.pen_color = colorchooser.askcolor(color=self.pen_color)[1]
-        self.update_color_preview(self.pen_color)
+        self.update_color_preview()
 
     def use_eraser(self):
-        # Устанавливает цвет пера в цвет фона ("white") для использования в качестве ластика
-        self.previous_color = self.pen_color  # Сохранение предыдущего цвета
+        self.previous_color = self.pen_color
         self.pen_color = "white"
-        self.update_color_preview(self.pen_color)
+        self.update_color_preview()
 
     def pick_color(self, event):
-        # Получение цвета пикселя под курсором мыши и установка его как текущего цвета пера
         x, y = event.x, event.y
         self.pen_color = self.image.getpixel((x, y))
         self.previous_color = self.pen_color
-        self.update_color_preview(self.pen_color)
+        self.update_color_preview()
 
-    # Открывает диалоговое окно для выбора файла и сохраняет изображение в выбранный файл в формате PNG
-    # Если файл не имеет расширения .png, то оно добавляется автоматически.
     def save_image(self, event=None):
         file_path = filedialog.asksaveasfilename(filetypes=[('PNG files', '*.png')])
         if file_path:
@@ -124,13 +101,22 @@ class DrawingApp:
             self.image.save(file_path)
             messagebox.showinfo("Информация", "Изображение успешно сохранено!")
 
-    def update_color_preview(self, color, pen_color=None):
-        self.color_preview.config(bg=color)
+    def update_color_preview(self):
+        self.color_preview.config(bg=self.pen_color)
+
+    def resize_canvas(self):
+        new_width = simpledialog.askinteger("Изменение размера холста", "Введите новую ширину:")
+        new_height = simpledialog.askinteger("Изменение размера холста", "Введите новую высоту:")
+        if new_width and new_height:
+            self.canvas.config(width=new_width, height=new_height)
+            self.image = Image.new("RGB", (new_width, new_height), "white")
+            self.draw = ImageDraw.Draw(self.image)
+
+
 def main():
     root = tk.Tk()
     app = DrawingApp(root)
     root.mainloop()
-
 
 if __name__ == "__main__":
     main()
